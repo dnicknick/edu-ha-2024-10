@@ -15,8 +15,13 @@ class PostController extends Controller
         //    'content' => 'required|string',
         //]);
 
+        $authUser = $this->getAuth($request);
+        if ($authUser === null) {
+            return response()->json([], 401); // 401 Unauthorized
+        }
+
         $post = Post::create([
-            'user_id' => 1, // @fixme auth()->id(),
+            'user_id' => $authUser->id,
             'content' => $request->get('text', ''),
         ]);
 
@@ -65,9 +70,9 @@ class PostController extends Controller
         $limit = $request->get('limit', 10);
         $limit = $limit < 1 ? 1 : $limit;
 
-        $authUser = User::find(1); //fixme auth()->user();
+        $authUser = $this->getAuth($request);
         if ($authUser === null) {
-            return response()->json([], 401);
+            return response()->json([], 401); // 401 Unauthorized
         }
 
         $friends = $authUser->friends();

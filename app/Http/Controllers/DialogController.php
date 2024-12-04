@@ -14,8 +14,12 @@ class DialogController extends Controller
         try {
             //$validated = $request->validate(['content' => 'required|string']);
             $user = User::findOrFail($user_id);
+            $authUser = $this->getAuth($request);
+            if ($authUser === null) {
+                return response()->json([], 401); // 401 Unauthorized
+            }
             $message = Message::create([
-                'sender_id' => 1, // @fixme
+                'sender_id' => $authUser->id,
                 'receiver_id' => $user_id,
                 'content' => $request->get('text', ''),
             ]);
@@ -26,10 +30,14 @@ class DialogController extends Controller
         }
     }
 
-    public function listDialog($user_id): JsonResponse
+    public function listDialog($user_id, Request $request): JsonResponse
     {
         try {
-            $authUser = User::find(1); // fixme auth()->user();
+            $authUser = $this->getAuth($request);
+            if ($authUser === null) {
+                return response()->json([], 401); // 401 Unauthorized
+            }
+
             $user = User::findOrFail($user_id);
             $messages = Message::query()
                 ->where(function($query) use ($user, $authUser) {

@@ -21,6 +21,7 @@ $router->post('/user/register', 'UserController@register');
 $router->post('/login', 'UserController@login');
 $router->get('/user/get/{id}', 'UserController@getUser');
 $router->get('/user/search', 'UserController@searchUsers');
+$router->get('/user/info', 'UserController@info');
 
 $router->put('/friend/set/{user_id}', 'FriendController@addFriend');
 $router->put('/friend/delete/{user_id}', 'FriendController@removeFriend');

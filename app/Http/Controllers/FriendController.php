@@ -4,14 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class FriendController extends Controller
 {
-    public function addFriend($user_id): JsonResponse
+    public function addFriend($user_id, Request $request): JsonResponse
     {
         try {
             $friend = User::findOrFail($user_id);
-            $authUser = User::find(1); // @fixme auth()->user();
+            $authUser = $this->getAuth($request);
+            if ($authUser === null) {
+                return response()->json([], 401); // 401 Unauthorized
+            }
             $authUser->friends()->attach($friend);
             return response()->json([
                 'message' => 'Пользователь успешно указал своего друга'
@@ -21,11 +25,14 @@ class FriendController extends Controller
         }
     }
 
-    public function removeFriend($user_id): JsonResponse
+    public function removeFriend($user_id, Request $request): JsonResponse
     {
         try {
             $friend = User::findOrFail($user_id);
-            $authUser = User::find(1); // @fixme auth()->user();
+            $authUser = $this->getAuth($request);
+            if ($authUser === null) {
+                return response()->json([], 401); // 401 Unauthorized
+            }
             if ($authUser->friends()->count() === 0) {
                 return response()->json([], 400);
             }
