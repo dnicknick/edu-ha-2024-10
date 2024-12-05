@@ -5,80 +5,98 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\User;
-use Ramsey\Uuid\Uuid;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
     public function register(Request $request): JsonResponse
     {
-        // Валидация и создание пользователя
-        //$validator = Validator::make($request->all(), [
-        //    'first_name' => 'required|string|max:255',
-        //    'second_name' => 'required|string|max:255',
-        //    'birthdate' => 'required|string|max:255',
-        //    'biography' => 'required|string|max:255',
-        //    'city' => 'required|string|max:255',
-        //    'email' => 'required|string|email|max:255|unique:users',
-        //    'password' => 'required|string|min:8',
-        //]);
+        try {
+            $this->validate($request, [
+                'first_name' => 'required|string|max:255',
+                'second_name' => 'required|string|max:255',
+                'birthdate' => 'required|string|max:255',
+                'biography' => 'required|string|max:255',
+                'city' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:users',
+                'password' => 'required|string|min:8',
+            ]);
 
-        $birthdate = new \DateTimeImmutable($request->get('birthdate', ''));
-        $password = $request->get('password', '');
-        $hash = password_hash($password, PASSWORD_BCRYPT);
-        $token = $this->generateUUIDv4Manual();
+            $birthdate = new \DateTimeImmutable(
+                $request->get('birthdate', '')
+            );
+            $user = User::create([
+                'first_name' => $request->get('first_name', ''),
+                'second_name' => $request->get('second_name', ''),
+                'birthdate' => $birthdate->format('Y.m.d'),
+                'biography' => $request->get('biography', ''),
+                'city' => $request->get('city', ''),
+                'email' => $request->get('email', ''),
+                'password' => password_hash(
+                    $request->get('password', ''),
+                    PASSWORD_BCRYPT
+                ),
+                'remember_token' => $this->generateUUIDv4Manual(),
+            ]);
 
-        $user = User::create([
-            'first_name' => $request->get('first_name', ''),
-            'second_name' => $request->get('second_name', ''),
-            'birthdate' => $birthdate->format('Y.m.d'),
-            'biography' => $request->get('biography', ''),
-            'city' => $request->get('city', ''),
-            'email' => $request->get('email', ''),
-            'password' => $hash,
-            'remember_token' => $token,
-        ]);
-
-        // 200
-        // user_id "e4d2e6b0-cde2-42c5-aac3-0b8316f21e58"
-
-        // "400": { "description": "Невалидные данные" },
-        // "500": { "$ref": "#/components/responses/5xx"},
-        // "503": { "$ref": "#/components/responses/5xx"}
-        return response()->json(['user_id' => $token], 200);
+            return $this->httpJsonOk([
+                'user_id' => $user->remember_token
+            ]);
+        } catch (ValidationException $e) {
+            return $this->httpJsonBadRequest([
+                'description' => 'Невалидные данные',
+                'message' => $e->getMessage(),
+            ]);
+        } catch (\Exception $e) {
+            return $this->httpJsonInternalServerError([
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function login(Request $request): JsonResponse
     {
-        // id + password
+        try {
+            $this->validate($request, [
+                'id' => 'required|string|max:255',
+                'password' => 'required|string|min:8',
+            ]);
 
-        //dd($request->all());
-        $userId = $request->get('id', null);
-        $userPassword = $request->get('password', null);
-        $hash = password_hash($userPassword, PASSWORD_BCRYPT);
-        //dd($userId, $hash, $userPassword);
-        //dd(hash_equals($hash, crypt($userPassword, $hash)));
-        $user = User::find($userId);
-        if ($user === null) {
-            return response()->json([], 404);
+            $userId = $request->get('id', null);
+            $user = User::find($userId);
+            if ($user === null) {
+                return $this->httpJsonNotFound([
+                    'description' => 'Пользователь не найден',
+                ]);
+            }
+
+            $userPassword = $request->get('password', null);
+            if (!password_verify($userPassword, $user->password)) {
+                return $this->httpJsonNotFound([
+                    'description' => 'Пароль неправильный',
+                ]);
+            }
+
+            return $this->httpJsonOk(['token' => $user->remember_token]);
+        } catch (ValidationException $e) {
+            return $this->httpJsonBadRequest([
+                'description' => 'Невалидные данные',
+                'message' => $e->getMessage(),
+            ]);
+        } catch (\Exception $e) {
+            return $this->httpJsonInternalServerError([
+                'message' => $e->getMessage()
+            ]);
         }
-
-        $usrPassword = $user->password;
-
-        if (password_verify($userPassword, $usrPassword)) {
-            return response()->json(['token' => $user->remember_token], 200);
-        }
-
-
-        return response()->json([], 400);
     }
 
     public function getUser($id): JsonResponse
     {
         try {
             $user = User::findOrFail($id);
-            return response()->json($user);
+            return $this->httpJsonOk($user);
         } catch (\Exception $e) {
-            return response()->json([], 404);
+            return $this->httpJsonNotFound([]);
         }
     }
 
@@ -122,9 +140,9 @@ class UserController extends Controller
     {
         try {
             $user = $this->getAuth($request);
-            return response()->json($user);
+            return $this->httpJsonOk($user);
         } catch (\Exception $e) {
-            return response()->json([], 404);
+            return $this->httpJsonNotFound([]);
         }
     }
 }

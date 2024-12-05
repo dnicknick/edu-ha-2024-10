@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Laravel\Lumen\Routing\Controller as BaseController;
+use Symfony\Component\HttpFoundation\Response;
 
 class Controller extends BaseController
 {
@@ -17,5 +18,37 @@ class Controller extends BaseController
             ->first();
 
         return $user;
+    }
+
+    public function httpJsonOk($data): JsonResponse
+    {
+        return response()->json(
+            $data,
+            Response::HTTP_OK
+        );
+    }
+
+    public function httpJsonNotFound($data): JsonResponse
+    {
+        return response()->json(
+            $data,
+            Response::HTTP_NOT_FOUND
+        );
+    }
+
+    public function httpJsonBadRequest($data): JsonResponse
+    {
+        return response()->json(
+            $data,
+            Response::HTTP_BAD_REQUEST
+        );
+    }
+
+    public function httpJsonInternalServerError($data): JsonResponse
+    {
+        return response()->json(
+            $data,
+            Response::HTTP_INTERNAL_SERVER_ERROR
+        );
     }
 }
